@@ -4,9 +4,11 @@
 
   var STORAGE_KEY = 'fund_holdings_v1';
 
+  // amount/profit 是用户在「持仓管理」里直接填写的持仓金额与盈亏金额（照抄支付宝里看到的数字即可）；
+  // shares/costNav 是添加时用当天估值反推出来的等效份额与成本净值，仅用于后续实时追踪计算，不需要用户关心。
   var DEMO_HOLDINGS = [
-    { fundCode: '000001', fundName: '华夏成长混合（示例）', shares: 1000, costNav: 1.2 },
-    { fundCode: '161725', fundName: '招商中证白酒指数(示例)', shares: 500, costNav: 1.1 },
+    { fundCode: '000001', fundName: '华夏成长混合（示例）', amount: 1200, profit: 0, shares: 1000, costNav: 1.2 },
+    { fundCode: '161725', fundName: '招商中证白酒指数(示例)', amount: 550, profit: 0, shares: 500, costNav: 1.1 },
   ];
 
   function getHoldings() {

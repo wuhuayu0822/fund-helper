@@ -133,7 +133,7 @@
             error: false,
           };
         })
-        .catch(function () {
+        .catch(function (err) {
           return {
             fundCode: h.fundCode,
             fundName: h.fundName,
@@ -146,7 +146,7 @@
             profit: 0,
             profitPct: 0,
             verdict: 'watch',
-            signalLabel: '数据获取失败',
+            signalLabel: '获取失败：' + ((err && err.message) || '未知错误'),
             todayChange: 0,
             costTotal: h.shares * h.costNav,
             error: true,
@@ -290,8 +290,8 @@
     $('m-formTitle').textContent = '添加持仓';
     $('m-code').value = '';
     $('m-code').disabled = false;
-    $('m-shares').value = '';
-    $('m-cost').value = '';
+    $('m-amount').value = '';
+    $('m-profit').value = '';
     $('m-error').classList.add('hidden');
     $('m-cancelBtn').classList.add('hidden');
     $('m-submitBtn').textContent = '查询并添加';
@@ -314,7 +314,7 @@
           '<button class="link" data-action="edit">编辑</button>' +
           '<button class="link link-danger" data-action="delete">删除</button>' +
           '</div></div>' +
-          '<div class="muted small-row">代码 ' + esc(h.fundCode) + ' · 份额 ' + esc(h.shares) + ' · 成本净值 ' + esc(h.costNav) + '</div>' +
+          '<div class="muted small-row">代码 ' + esc(h.fundCode) + ' · 持仓金额 ¥' + esc(h.amount) + ' · 盈亏 ' + (h.profit >= 0 ? '+' : '') + esc(h.profit) + '</div>' +
           '</div>'
         );
       })
@@ -338,8 +338,8 @@
     $('m-formTitle').textContent = '编辑持仓';
     $('m-code').value = item.fundCode;
     $('m-code').disabled = true;
-    $('m-shares').value = item.shares;
-    $('m-cost').value = item.costNav;
+    $('m-amount').value = item.amount;
+    $('m-profit').value = item.profit;
     $('m-error').classList.add('hidden');
     $('m-cancelBtn').classList.remove('hidden');
     $('m-submitBtn').textContent = '保存修改';
@@ -356,49 +356,54 @@
 
   $('m-submitBtn').addEventListener('click', function () {
     var code = $('m-code').value.trim();
-    var sharesRaw = $('m-shares').value.trim();
-    var costRaw = $('m-cost').value.trim();
+    var amountRaw = $('m-amount').value.trim();
+    var profitRaw = $('m-profit').value.trim();
 
     if (!/^\d{6}$/.test(code)) {
       showFormError('请输入正确的6位基金代码');
       return;
     }
-    var shares = parseFloat(sharesRaw);
-    if (!sharesRaw || isNaN(shares) || shares <= 0) {
-      showFormError('请输入有效的持有份额');
+    var amount = parseFloat(amountRaw);
+    if (!amountRaw || isNaN(amount) || amount <= 0) {
+      showFormError('请输入有效的持仓金额');
       return;
     }
-    var cost = parseFloat(costRaw);
-    if (!costRaw || isNaN(cost) || cost <= 0) {
-      showFormError('请输入有效的成本净值');
+    var profit = parseFloat(profitRaw);
+    if (profitRaw === '' || isNaN(profit)) {
+      showFormError('请输入有效的持仓盈亏（没有盈亏填 0）');
+      return;
+    }
+    var costTotal = amount - profit;
+    if (costTotal <= 0) {
+      showFormError('盈亏金额不能大于等于持仓金额（成本不能为负）');
       return;
     }
     $('m-error').classList.add('hidden');
 
     var editingCode = manageState.editingCode;
 
-    function finish(fundName) {
-      FundStorage.addHolding({ fundCode: code, fundName: fundName || code, shares: shares, costNav: cost });
-      resetForm();
-      renderManageList();
-    }
-
-    if (editingCode) {
-      var existing = FundStorage.getHoldings().find(function (h) { return h.fundCode === editingCode; });
-      finish(existing ? existing.fundName : code);
-      return;
-    }
-
     $('m-submitBtn').disabled = true;
     $('m-submitBtn').textContent = '查询中...';
     FundApi.fetchEstimate(code)
       .then(function (est) {
-        finish(est.name);
+        // 用当前估值反推等效份额与成本净值，后续实时追踪都基于这两个值计算
+        var shares = amount / est.estimateNav;
+        var costNav = costTotal / shares;
+        FundStorage.addHolding({
+          fundCode: code,
+          fundName: est.name || code,
+          amount: amount,
+          profit: profit,
+          shares: shares,
+          costNav: costNav,
+        });
+        resetForm();
+        renderManageList();
       })
-      .catch(function () {
+      .catch(function (err) {
         $('m-submitBtn').disabled = false;
-        $('m-submitBtn').textContent = '查询并添加';
-        showFormError('未查询到该基金，请确认代码是否正确');
+        $('m-submitBtn').textContent = editingCode ? '保存修改' : '查询并添加';
+        showFormError('未能获取该基金数据：' + ((err && err.message) || '请确认代码是否正确'));
       });
   });
 

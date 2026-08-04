@@ -17,6 +17,9 @@
 
   function loadScript(src, onload, onerror, timeoutMs) {
     var script = document.createElement('script');
+    // 部分基金数据接口对来源页面（Referer）比较敏感，不发送 Referer 更容易被放行
+    script.referrerPolicy = 'no-referrer';
+    script.setAttribute('referrerpolicy', 'no-referrer');
     var timer;
     function cleanup() {
       clearTimeout(timer);
@@ -28,12 +31,12 @@
     };
     script.onerror = function () {
       cleanup();
-      onerror(new Error('网络请求失败'));
+      onerror(new Error('网络请求失败（域名可能被拦截，或该基金代码不存在）'));
     };
     timer = setTimeout(function () {
       cleanup();
-      onerror(new Error('请求超时'));
-    }, timeoutMs || 10000);
+      onerror(new Error('请求超时（网络较慢，或接口无响应）'));
+    }, timeoutMs || 15000);
     script.src = src;
     document.head.appendChild(script);
     return cleanup;
@@ -73,7 +76,7 @@
           delete estimateResolvers[fundCode];
           reject(err);
         },
-        10000
+        15000
       );
     });
   }
@@ -117,7 +120,7 @@
           }
         },
         reject,
-        12000
+        15000
       );
     });
   }
