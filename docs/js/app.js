@@ -102,38 +102,32 @@
     listEl.innerHTML = '<div class="card muted center-text">数据加载中...</div>';
 
     var tasks = holdings.map(function (h) {
-      return Promise.all([
-        FundApi.fetchEstimate(h.fundCode),
-        FundApi.fetchHistory(h.fundCode, 90).catch(function () { return null; }),
-      ])
-        .then(function (res) {
-          var est = res[0];
-          var hist = res[1];
-          var marketValue = h.shares * est.estimateNav;
-          var profit = h.shares * (est.estimateNav - h.costNav);
-          var profitPct = ((est.estimateNav - h.costNav) / h.costNav) * 100;
-          var verdict = 'watch';
-          var signalLabel = '';
-          if (hist && hist.history && hist.history.length > 0) {
-            var withToday = hist.history.concat([{ date: 'today', nav: est.estimateNav }]);
-            var signal = FundIndicators.generateSignal(withToday);
-            verdict = signal.verdict;
-            signalLabel = VERDICT_LABEL[signal.verdict];
-          }
+      return FundApi.fetchHistory(h.fundCode, 90)
+        .then(function (hist) {
+          var latest = FundApi.getLatestFromHistory(hist.history);
+          if (!latest) throw new Error('该基金暂无净值数据');
+          var marketValue = h.shares * latest.nav;
+          var profit = h.shares * (latest.nav - h.costNav);
+          var profitPct = ((latest.nav - h.costNav) / h.costNav) * 100;
+
+          var signal = FundIndicators.generateSignal(hist.history);
+          var verdict = signal.verdict;
+          var signalLabel = VERDICT_LABEL[signal.verdict];
+
           return {
             fundCode: h.fundCode,
-            fundName: est.name || h.fundName,
+            fundName: hist.name || h.fundName,
             shares: h.shares,
             costNav: h.costNav,
-            estimateNav: est.estimateNav,
-            estimateChangePct: est.estimateChangePct,
-            estimateTime: est.estimateTime,
+            latestNav: latest.nav,
+            latestDate: latest.date,
+            changePct: latest.changePct,
             marketValue: marketValue,
             profit: profit,
             profitPct: profitPct,
             verdict: verdict,
             signalLabel: signalLabel,
-            todayChange: h.shares * est.estimateNav * (est.estimateChangePct / 100),
+            latestChange: h.shares * latest.nav * (latest.changePct / 100),
             costTotal: h.shares * h.costNav,
             error: false,
           };
@@ -144,15 +138,15 @@
             fundName: h.fundName,
             shares: h.shares,
             costNav: h.costNav,
-            estimateNav: null,
-            estimateChangePct: 0,
-            estimateTime: '',
+            latestNav: null,
+            latestDate: '',
+            changePct: 0,
             marketValue: 0,
             profit: 0,
             profitPct: 0,
             verdict: 'watch',
             signalLabel: '获取失败：' + ((err && err.message) || '未知错误'),
-            todayChange: 0,
+            latestChange: 0,
             costTotal: h.shares * h.costNav,
             error: true,
           };
@@ -171,7 +165,7 @@
     var listEl = $('overview-list');
     listEl.innerHTML = items
       .map(function (h) {
-        var changeClass = h.estimateChangePct >= 0 ? 'up' : 'down';
+        var changeClass = h.changePct >= 0 ? 'up' : 'down';
         var profitClass = h.profit >= 0 ? 'up' : 'down';
         var tag = h.signalLabel
           ? '<div class="signal-tag signal-' + h.verdict + '">' + esc(h.signalLabel) + '</div>'
@@ -179,9 +173,9 @@
         return (
           '<div class="card holding-card" data-code="' + esc(h.fundCode) + '">' +
           '<div class="row"><div class="fund-name">' + esc(h.fundName) + '</div>' +
-          '<div class="' + changeClass + '">' + signed(h.estimateChangePct, 2) + '%</div></div>' +
+          '<div class="' + changeClass + '">' + signed(h.changePct, 2) + '%</div></div>' +
           '<div class="row small-row muted"><span>代码 ' + esc(h.fundCode) + '</span>' +
-          '<span>估值 ' + (h.estimateNav === null ? '--' : fmt(h.estimateNav, 4)) + (h.estimateTime ? ' (' + esc(h.estimateTime) + ')' : '') + '</span></div>' +
+          '<span>净值 ' + (h.latestNav === null ? '--' : fmt(h.latestNav, 4)) + (h.latestDate ? ' (' + esc(h.latestDate) + ')' : '') + '</span></div>' +
           '<div class="row small-row"><span class="muted">市值 ¥' + fmt(h.marketValue, 2) + '</span>' +
           '<span class="' + profitClass + '">盈亏 ' + signed(h.profit, 2) + ' (' + signed(h.profitPct, 2) + '%)</span></div>' +
           tag +
@@ -198,12 +192,12 @@
   }
 
   function renderSummary(items) {
-    var totalMarketValue = 0, totalProfit = 0, totalCost = 0, totalTodayChange = 0;
+    var totalMarketValue = 0, totalProfit = 0, totalCost = 0, totalLatestChange = 0;
     items.forEach(function (h) {
       totalMarketValue += h.marketValue || 0;
       totalProfit += h.profit || 0;
       totalCost += h.costTotal || 0;
-      totalTodayChange += h.todayChange || 0;
+      totalLatestChange += h.latestChange || 0;
     });
     var totalProfitPct = totalCost > 0 ? (totalProfit / totalCost) * 100 : 0;
 
@@ -212,8 +206,8 @@
     profitEl.textContent = '持仓盈亏 ' + signed(totalProfit, 2) + ' (' + signed(totalProfitPct, 2) + '%)';
     profitEl.className = totalProfit >= 0 ? 'up' : 'down';
     var todayEl = $('totalTodayChange');
-    todayEl.textContent = '今日估算 ' + signed(totalTodayChange, 2);
-    todayEl.className = totalTodayChange >= 0 ? 'up' : 'down';
+    todayEl.textContent = '较上一交易日 ' + signed(totalLatestChange, 2);
+    todayEl.className = totalLatestChange >= 0 ? 'up' : 'down';
   }
 
   // ---------------- detail ----------------
@@ -235,24 +229,23 @@
     $('d-newsLinks').innerHTML = '';
     lastChartData = null;
 
-    Promise.all([FundApi.fetchEstimate(code), FundApi.fetchHistory(code, 90)])
-      .then(function (res) {
+    FundApi.fetchHistory(code, 90)
+      .then(function (hist) {
         if (parseHash().code !== code) return; // 用户已切换到其他基金
-        var est = res[0];
-        var hist = res[1];
         var history = hist.history;
-        var withToday = history.concat([{ date: 'today', nav: est.estimateNav }]);
-        var signal = FundIndicators.generateSignal(withToday);
+        var latest = FundApi.getLatestFromHistory(history);
+        if (!latest) throw new Error('该基金暂无净值数据');
+        var signal = FundIndicators.generateSignal(history);
         var s = signal.stats;
 
-        $('d-fundName').textContent = hist.name || est.name || code;
+        $('d-fundName').textContent = hist.name || code;
         $('d-fundCode').textContent = '代码 ' + code;
-        $('d-estimateNav').textContent = fmt(est.estimateNav, 4);
+        $('d-estimateNav').textContent = fmt(latest.nav, 4);
         var changeEl = $('d-estimateChangePct');
-        changeEl.textContent = signed(est.estimateChangePct, 2) + '%';
-        changeEl.className = 'nav-change ' + (est.estimateChangePct >= 0 ? 'up' : 'down');
+        changeEl.textContent = signed(latest.changePct, 2) + '%';
+        changeEl.className = 'nav-change ' + (latest.changePct >= 0 ? 'up' : 'down');
         $('d-estimateTime').textContent =
-          '估值时间 ' + (est.estimateTime || '--') + '（昨日净值 ' + fmt(est.lastNav, 4) + '，' + (est.lastNavDate || '--') + '）';
+          '净值日期 ' + (latest.date || '--') + (latest.prevNav !== null ? '（较上一交易日净值 ' + fmt(latest.prevNav, 4) + '）' : '');
 
         $('d-signalCard').className = 'card signal-card ' + signal.verdict;
         $('d-verdictLabel').textContent = signal.verdictLabel;
@@ -289,7 +282,7 @@
           })
           .join('');
 
-        var navList = withToday.map(function (h) { return h.nav; });
+        var navList = history.map(function (h) { return h.nav; });
         var ma20Arr = FundIndicators.computeMA(navList, Math.min(20, navList.length));
         lastChartData = { navList: navList, ma20Arr: ma20Arr };
         FundChart.drawNavChart($('chart'), navList, ma20Arr);
@@ -407,14 +400,16 @@
 
     $('m-submitBtn').disabled = true;
     $('m-submitBtn').textContent = '查询中...';
-    FundApi.fetchEstimate(code)
-      .then(function (est) {
-        // 用当前估值反推等效份额与成本净值，后续实时追踪都基于这两个值计算
-        var shares = amount / est.estimateNav;
+    FundApi.fetchHistory(code, 5)
+      .then(function (hist) {
+        var latest = FundApi.getLatestFromHistory(hist.history);
+        if (!latest) throw new Error('该基金暂无净值数据');
+        // 用最新官方净值反推等效份额与成本净值，后续追踪都基于这两个值计算
+        var shares = amount / latest.nav;
         var costNav = costTotal / shares;
         FundStorage.addHolding({
           fundCode: code,
-          fundName: est.name || code,
+          fundName: hist.name || code,
           amount: amount,
           profit: profit,
           shares: shares,
