@@ -11,6 +11,17 @@
     { fundCode: '161725', fundName: '招商中证白酒指数(示例)', amount: 550, profit: 0, shares: 500, costNav: 1.1 },
   ];
 
+  // 兼容旧版本（份额+成本净值）存下的数据：缺 amount/profit 字段时用 shares*costNav 反推一个占位值
+  function normalize(h) {
+    if (h.amount !== undefined && h.profit !== undefined) return h;
+    var shares = h.shares || 0;
+    var costNav = h.costNav || 0;
+    return Object.assign({}, h, {
+      amount: h.amount !== undefined ? h.amount : Math.round(shares * costNav * 100) / 100,
+      profit: h.profit !== undefined ? h.profit : 0,
+    });
+  }
+
   function getHoldings() {
     var raw;
     try {
@@ -24,7 +35,11 @@
     }
     try {
       var list = JSON.parse(raw);
-      return Array.isArray(list) ? list : [];
+      if (!Array.isArray(list)) return [];
+      var needsMigration = list.some(function (h) { return h.amount === undefined || h.profit === undefined; });
+      var normalized = list.map(normalize);
+      if (needsMigration) saveHoldings(normalized);
+      return normalized;
     } catch (e) {
       return [];
     }
