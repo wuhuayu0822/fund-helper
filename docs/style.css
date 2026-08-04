@@ -146,6 +146,12 @@ button {
   font-size: 13px;
 }
 
+.summary-updated {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 10px;
+}
+
 .list-header {
   margin: 18px 14px 4px;
 }
@@ -280,16 +286,54 @@ canvas#chart {
   background: #f3fbf6;
 }
 
+.signal-head {
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
 .signal-label {
   font-size: 16px;
   font-weight: 700;
-  margin-bottom: 8px;
+  max-width: 72%;
+}
+
+.score-badge {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: #eef0f3;
+  color: #4b5563;
+  white-space: nowrap;
+}
+
+.signal-card.buy .score-badge {
+  background: #fdeaea;
+  color: #e54d42;
+}
+
+.signal-card.sell .score-badge {
+  background: #e8f8ef;
+  color: #16a34a;
 }
 
 .reason-item {
   font-size: 13px;
   color: #4b5563;
   line-height: 1.7;
+}
+
+.news-link {
+  display: block;
+  font-size: 14px;
+  color: #1677ff;
+  text-decoration: none;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.news-link:last-child {
+  border-bottom: none;
 }
 
 .stat-grid {
@@ -428,5 +472,12 @@ canvas#chart {
   }
   .signal-card.watch {
     border-left-color: #4b5563;
+  }
+  .score-badge {
+    background: #262a33;
+    color: #9aa1ab;
+  }
+  .news-link {
+    border-bottom-color: #262a33;
   }
 }

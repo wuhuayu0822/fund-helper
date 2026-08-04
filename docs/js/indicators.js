@@ -1,6 +1,6 @@
 /**
  * 技术指标计算与买卖建议生成（与小程序版本算法一致）
- * 全部基于历史单位净值的规则型信号，仅作参考，不构成投资建议。
+ * 全部基于历史单位净值的规则型信号计算，不接入新闻/资讯/AI服务，仅供参考，不构成投资建议。
  */
 (function (global) {
   'use strict';
@@ -32,12 +32,90 @@
     return 100 - 100 / (1 + rs);
   }
 
+  // 指数移动平均，从第 period-1 个点开始用简单平均作为种子，此后按标准 EMA 公式递推
+  function computeEMA(list, period) {
+    var result = new Array(list.length).fill(null);
+    if (list.length < period) return result;
+    var sum = 0;
+    for (var i = 0; i < period; i++) sum += list[i];
+    var prev = sum / period;
+    result[period - 1] = prev;
+    var k = 2 / (period + 1);
+    for (var j = period; j < list.length; j++) {
+      prev = list[j] * k + prev * (1 - k);
+      result[j] = prev;
+    }
+    return result;
+  }
+
+  // MACD：DIF = EMA12 - EMA26，DEA = DIF 的 EMA9，柱状值 = (DIF-DEA)*2
+  function computeMACD(navList) {
+    var ema12 = computeEMA(navList, 12);
+    var ema26 = computeEMA(navList, 26);
+    var dif = navList.map(function (_, i) {
+      return ema12[i] !== null && ema26[i] !== null ? ema12[i] - ema26[i] : null;
+    });
+
+    var difValues = [];
+    var difIndexMap = [];
+    dif.forEach(function (v, i) {
+      if (v !== null) {
+        difValues.push(v);
+        difIndexMap.push(i);
+      }
+    });
+    var deaOnDif = computeEMA(difValues, 9);
+    var dea = new Array(navList.length).fill(null);
+    deaOnDif.forEach(function (v, idx) {
+      if (v !== null) dea[difIndexMap[idx]] = v;
+    });
+
+    var hist = navList.map(function (_, i) {
+      return dif[i] !== null && dea[i] !== null ? (dif[i] - dea[i]) * 2 : null;
+    });
+
+    return { dif: dif, dea: dea, hist: hist };
+  }
+
+  // 布林带：period 日均线 ± k 倍标准差
+  function computeBollinger(navList, period, k) {
+    period = period || 20;
+    k = k || 2;
+    var ma = computeMA(navList, Math.min(period, navList.length));
+    var upper = new Array(navList.length).fill(null);
+    var lower = new Array(navList.length).fill(null);
+    for (var i = period - 1; i < navList.length; i++) {
+      var mean = ma[i];
+      var variance = 0;
+      for (var j = i - period + 1; j <= i; j++) variance += Math.pow(navList[j] - mean, 2);
+      var std = Math.sqrt(variance / period);
+      upper[i] = mean + k * std;
+      lower[i] = mean - k * std;
+    }
+    return { upper: upper, lower: lower, mid: ma };
+  }
+
+  // 区间最大回撤（百分比，负数）
+  function computeMaxDrawdown(navList) {
+    var peak = -Infinity;
+    var maxDd = 0;
+    for (var i = 0; i < navList.length; i++) {
+      if (navList[i] > peak) peak = navList[i];
+      var dd = (navList[i] - peak) / peak;
+      if (dd < maxDd) maxDd = dd;
+    }
+    return maxDd * 100;
+  }
+
+  var MAX_SCORE = 7; // RSI(±2) + 区间分位(±1) + 乖离率(±1) + 均线金叉死叉(±1) + MACD金叉死叉(±1) + 布林带触轨(±1)
+
   function generateSignal(history) {
     if (!history || history.length < 10) {
       return {
         verdict: 'watch',
         verdictLabel: '数据不足，暂不建议',
         score: 0,
+        maxScore: MAX_SCORE,
         reasons: ['历史净值数据不足（少于10个交易日），暂无法生成可靠信号'],
         stats: {},
       };
@@ -64,6 +142,17 @@
     var position = high === low ? 0.5 : (latest - low) / (high - low);
 
     var bias20 = ma20 ? ((latest - ma20) / ma20) * 100 : null;
+
+    var macd = computeMACD(navList);
+    var dif = macd.dif[macd.dif.length - 1];
+    var dea = macd.dea[macd.dea.length - 1];
+    var macdHist = macd.hist[macd.hist.length - 1];
+
+    var boll = computeBollinger(navList, Math.min(20, navList.length));
+    var bollUpper = boll.upper[boll.upper.length - 1];
+    var bollLower = boll.lower[boll.lower.length - 1];
+
+    var maxDrawdown = computeMaxDrawdown(windowVals);
 
     var buyScore = 0;
     var sellScore = 0;
@@ -111,13 +200,37 @@
       }
     }
 
+    if (macd.dif.length >= 2 && macd.dea.length >= 2) {
+      var prevDif = macd.dif[macd.dif.length - 2];
+      var prevDea = macd.dea[macd.dea.length - 2];
+      if (prevDif !== null && prevDea !== null && dif !== null && dea !== null) {
+        if (prevDif <= prevDea && dif > dea) {
+          buyScore += 1;
+          reasons.push('MACD：DIF上穿DEA（金叉），中期动能转强');
+        } else if (prevDif >= prevDea && dif < dea) {
+          sellScore += 1;
+          reasons.push('MACD：DIF下穿DEA（死叉），中期动能转弱');
+        }
+      }
+    }
+
+    if (bollLower !== null && bollUpper !== null) {
+      if (latest <= bollLower) {
+        buyScore += 1;
+        reasons.push('净值触及布林带下轨，短期超跌，存在均值回归可能');
+      } else if (latest >= bollUpper) {
+        sellScore += 1;
+        reasons.push('净值触及布林带上轨，短期涨幅过快，注意均值回归风险');
+      }
+    }
+
     var score = buyScore - sellScore;
     var verdict = 'watch';
     var verdictLabel = '观望：维持现有节奏，等待更明确信号';
-    if (score >= 2) {
+    if (score >= 3) {
       verdict = 'buy';
       verdictLabel = '建议关注买入区间：可考虑逢低分批建仓';
-    } else if (score <= -2) {
+    } else if (score <= -3) {
       verdict = 'sell';
       verdictLabel = '建议关注卖出/止盈：短期涨幅或已透支，注意控制仓位';
     }
@@ -130,6 +243,7 @@
       verdict: verdict,
       verdictLabel: verdictLabel,
       score: score,
+      maxScore: MAX_SCORE,
       reasons: reasons,
       stats: {
         latest: latest,
@@ -142,6 +256,12 @@
         windowLen: windowLen,
         high: high,
         low: low,
+        macdDif: dif,
+        macdDea: dea,
+        macdHist: macdHist,
+        bollUpper: bollUpper,
+        bollLower: bollLower,
+        maxDrawdown: maxDrawdown,
       },
     };
   }
@@ -149,6 +269,10 @@
   global.FundIndicators = {
     computeMA: computeMA,
     computeRSI: computeRSI,
+    computeEMA: computeEMA,
+    computeMACD: computeMACD,
+    computeBollinger: computeBollinger,
+    computeMaxDrawdown: computeMaxDrawdown,
     generateSignal: generateSignal,
   };
 })(window);

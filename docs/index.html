@@ -23,6 +23,7 @@
         <div id="totalProfit">持仓盈亏 0.00 (0.00%)</div>
         <div id="totalTodayChange">今日估算 0.00</div>
       </div>
+      <div class="summary-updated" id="lastUpdated"></div>
     </div>
 
     <div class="row list-header">
@@ -56,13 +57,21 @@
     </div>
 
     <div class="card signal-card" id="d-signalCard">
-      <div class="signal-label" id="d-verdictLabel">--</div>
+      <div class="row signal-head">
+        <div class="signal-label" id="d-verdictLabel">--</div>
+        <div class="score-badge" id="d-scoreBadge">--</div>
+      </div>
       <div id="d-reasons"></div>
     </div>
 
     <div class="card">
       <div class="section-title">技术指标</div>
       <div class="stat-grid" id="d-stats"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">相关资讯（自行查看，未接入自动分析）</div>
+      <div id="d-newsLinks"></div>
     </div>
 
     <div class="card disclaimer muted" id="disclaimer2"></div>

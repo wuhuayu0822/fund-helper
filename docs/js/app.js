@@ -53,6 +53,11 @@
     }
   }
 
+  // 不做定时轮询，只在重新打开/切回页面时刷新一次，够用且省流量电量
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && parseHash().view === 'overview') loadOverview();
+  });
+
   window.addEventListener('hashchange', render);
   window.addEventListener('resize', debounce(function () {
     if (parseHash().view === 'detail' && lastChartData) {
@@ -99,7 +104,7 @@
     var tasks = holdings.map(function (h) {
       return Promise.all([
         FundApi.fetchEstimate(h.fundCode),
-        FundApi.fetchHistory(h.fundCode, 30).catch(function () { return null; }),
+        FundApi.fetchHistory(h.fundCode, 90).catch(function () { return null; }),
       ])
         .then(function (res) {
           var est = res[0];
@@ -158,6 +163,7 @@
       if (parseHash().view !== 'overview') return; // 用户已切换到其他页面
       renderOverviewList(results);
       renderSummary(results);
+      $('lastUpdated').textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
     });
   }
 
@@ -223,8 +229,10 @@
     $('d-estimateTime').textContent = '';
     $('d-signalCard').className = 'card signal-card';
     $('d-verdictLabel').textContent = '';
+    $('d-scoreBadge').textContent = '';
     $('d-reasons').innerHTML = '';
     $('d-stats').innerHTML = '';
+    $('d-newsLinks').innerHTML = '';
     lastChartData = null;
 
     Promise.all([FundApi.fetchEstimate(code), FundApi.fetchHistory(code, 90)])
@@ -248,6 +256,7 @@
 
         $('d-signalCard').className = 'card signal-card ' + signal.verdict;
         $('d-verdictLabel').textContent = signal.verdictLabel;
+        $('d-scoreBadge').textContent = '参考评分 ' + signed(signal.score, 0) + ' / ±' + signal.maxScore;
         $('d-reasons').innerHTML = signal.reasons
           .map(function (r) { return '<div class="reason-item">· ' + esc(r) + '</div>'; })
           .join('');
@@ -259,10 +268,24 @@
           ['RSI(14)', s.rsi !== null && s.rsi !== undefined ? fmt(s.rsi, 1) : '--'],
           ['乖离率(20)', s.bias20 !== null && s.bias20 !== undefined ? fmt(s.bias20, 1) + '%' : '--'],
           ['区间分位', s.position !== null && s.position !== undefined ? fmt(s.position * 100, 0) + '%' : '--'],
+          ['MACD柱', s.macdHist !== null && s.macdHist !== undefined ? fmt(s.macdHist, 4) : '--'],
+          ['布林带', s.bollLower !== null && s.bollUpper !== undefined ? fmt(s.bollLower, 3) + '~' + fmt(s.bollUpper, 3) : '--'],
+          ['近' + s.windowLen + '日最大回撤', s.maxDrawdown !== null && s.maxDrawdown !== undefined ? fmt(s.maxDrawdown, 1) + '%' : '--'],
         ];
         $('d-stats').innerHTML = stats
           .map(function (item) {
             return '<div class="stat-item"><span class="stat-label">' + item[0] + '</span><span class="stat-value">' + item[1] + '</span></div>';
+          })
+          .join('');
+
+        var newsLinks = [
+          { label: '该基金公告与详情（天天基金网）', url: 'https://fund.eastmoney.com/' + code + '.html' },
+          { label: '国内外财经要闻（华尔街见闻）', url: 'https://wallstreetcn.com/' },
+          { label: 'A股大盘与行业资讯（东方财富财经）', url: 'https://finance.eastmoney.com/' },
+        ];
+        $('d-newsLinks').innerHTML = newsLinks
+          .map(function (n) {
+            return '<a class="news-link" href="' + esc(n.url) + '" target="_blank" rel="noopener noreferrer">' + esc(n.label) + ' →</a>';
           })
           .join('');
 
