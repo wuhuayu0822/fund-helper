@@ -1,0 +1,12 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/detail/detail",
+    "pages/holdings/holdings"
+  ],
+  "window": {
+    "defaultTitle": "基金助手",
+    "titleBarColor": "#ffffff",
+    "pullRefresh": true
+  }
+}

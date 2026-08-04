@@ -1,0 +1,92 @@
+.page {
+  padding-bottom: 40rpx;
+}
+
+.summary {
+  background: linear-gradient(135deg, #1677ff, #4a9dff);
+  color: #ffffff;
+}
+
+.summary-title {
+  font-size: 26rpx;
+  opacity: 0.85;
+}
+
+.summary-value {
+  font-size: 56rpx;
+  font-weight: 600;
+  margin: 12rpx 0;
+}
+
+.summary-sub {
+  font-size: 26rpx;
+}
+
+.summary-sub .up {
+  color: #ffd8d8;
+}
+
+.summary-sub .down {
+  color: #d8ffe8;
+}
+
+.list-header {
+  margin: 24rpx 20rpx 8rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.manage-btn {
+  padding: 8rpx 24rpx;
+  font-size: 24rpx;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.holding-card {
+  position: relative;
+}
+
+.fund-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  max-width: 420rpx;
+}
+
+.small-row {
+  font-size: 24rpx;
+  margin-top: 10rpx;
+}
+
+.signal-tag {
+  display: inline-block;
+  margin-top: 16rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+}
+
+.signal-buy {
+  background: #fdeaea;
+  color: #e54d42;
+}
+
+.signal-sell {
+  background: #e8f8ef;
+  color: #16a34a;
+}
+
+.signal-watch {
+  background: #f0f2f5;
+  color: #6b7280;
+}
+
+.disclaimer {
+  font-size: 22rpx;
+  line-height: 1.6;
+}

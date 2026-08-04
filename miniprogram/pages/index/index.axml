@@ -1,0 +1,44 @@
+<view class="page">
+  <view class="card summary">
+    <view class="summary-title">持仓总资产（估）</view>
+    <view class="summary-value">¥{{totalMarketValue}}</view>
+    <view class="row summary-sub">
+      <view class="{{totalProfit >= 0 ? 'up' : 'down'}}">
+        持仓盈亏 {{totalProfit >= 0 ? '+' : ''}}{{totalProfit}} ({{totalProfitPct >= 0 ? '+' : ''}}{{totalProfitPct}}%)
+      </view>
+      <view class="{{totalTodayChange >= 0 ? 'up' : 'down'}}">
+        今日估算 {{totalTodayChange >= 0 ? '+' : ''}}{{totalTodayChange}}
+      </view>
+    </view>
+  </view>
+
+  <view class="row list-header">
+    <text class="section-title">我的持仓</text>
+    <view class="btn-plain manage-btn" onTap="goManage">管理持仓</view>
+  </view>
+
+  <view a:if="{{loading}}" class="card muted center-text">数据加载中...</view>
+  <view a:elif="{{holdings.length === 0}}" class="card muted center-text">暂无持仓，点击「管理持仓」添加</view>
+
+  <view class="card holding-card" a:for="{{holdings}}" a:key="fundCode" onTap="goDetail" data-code="{{item.fundCode}}">
+    <view class="row">
+      <view class="fund-name">{{item.fundName}}</view>
+      <view class="{{item.estimateChangePct >= 0 ? 'up' : 'down'}}">
+        {{item.estimateChangePct >= 0 ? '+' : ''}}{{item.estimateChangePct}}%
+      </view>
+    </view>
+    <view class="row muted small-row">
+      <text>代码 {{item.fundCode}}</text>
+      <text>估值 {{item.estimateNav}} ({{item.estimateTime}})</text>
+    </view>
+    <view class="row small-row">
+      <text class="muted">市值 ¥{{item.marketValue}}</text>
+      <text class="{{item.profit >= 0 ? 'up' : 'down'}}">
+        盈亏 {{item.profit >= 0 ? '+' : ''}}{{item.profit}} ({{item.profitPct >= 0 ? '+' : ''}}{{item.profitPct}}%)
+      </text>
+    </view>
+    <view a:if="{{item.signalLabel}}" class="signal-tag signal-{{item.verdict}}">{{item.signalLabel}}</view>
+  </view>
+
+  <view class="card disclaimer muted">{{disclaimer}}</view>
+</view>

@@ -1,0 +1,432 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #e9ebef;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  color: #1a1a1a;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  max-width: 480px;
+  min-height: 100vh;
+  margin: 0 auto;
+  background: #f5f6fa;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.06);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: 52px;
+  background: #ffffff;
+  border-bottom: 1px solid #eef0f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+}
+
+.topbar-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.topbar-back,
+.topbar-action {
+  position: absolute;
+  background: none;
+  border: none;
+  font-size: 15px;
+  color: #1677ff;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.topbar-back {
+  left: 4px;
+  font-size: 20px;
+}
+
+.topbar-action {
+  right: 4px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.view {
+  padding-bottom: 32px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 14px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 13px;
+}
+
+.up {
+  color: #e54d42;
+}
+
+.down {
+  color: #16a34a;
+}
+
+button {
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: #1677ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 22px;
+  font-size: 14px;
+  padding: 10px 22px;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+}
+
+.btn-plain {
+  background: #ffffff;
+  color: #1677ff;
+  border: 1px solid #1677ff;
+  border-radius: 22px;
+  font-size: 14px;
+  padding: 10px 22px;
+  cursor: pointer;
+}
+
+/* ---- overview ---- */
+
+.summary {
+  background: linear-gradient(135deg, #1677ff, #4a9dff);
+  color: #ffffff;
+}
+
+.summary-title {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.summary-value {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 6px 0;
+}
+
+.summary-sub {
+  font-size: 13px;
+}
+
+.list-header {
+  margin: 18px 14px 4px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.holding-card {
+  position: relative;
+  cursor: pointer;
+}
+
+.fund-name {
+  font-size: 16px;
+  font-weight: 600;
+  max-width: 70%;
+}
+
+.small-row {
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.signal-tag {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.signal-buy {
+  background: #fdeaea;
+  color: #e54d42;
+}
+
+.signal-sell {
+  background: #e8f8ef;
+  color: #16a34a;
+}
+
+.signal-watch {
+  background: #f0f2f5;
+  color: #6b7280;
+}
+
+.disclaimer {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ---- detail ---- */
+
+.head-card {
+  padding-bottom: 16px;
+}
+
+.small {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.nav-row {
+  justify-content: flex-start;
+  margin: 8px 0;
+  gap: 12px;
+}
+
+.nav-value {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.nav-change {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+canvas#chart {
+  width: 100%;
+  height: 220px;
+  display: block;
+}
+
+.legend {
+  justify-content: flex-start;
+  margin-top: 8px;
+  gap: 20px;
+}
+
+.legend-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  font-size: 12px;
+  color: #8a8f99;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  display: inline-block;
+}
+
+.dot-blue {
+  background: #1677ff;
+}
+
+.dot-orange {
+  background: #e5a800;
+}
+
+.signal-card {
+  border-left: 4px solid #6b7280;
+}
+
+.signal-card.buy {
+  border-left-color: #e54d42;
+  background: #fef6f6;
+}
+
+.signal-card.sell {
+  border-left-color: #16a34a;
+  background: #f3fbf6;
+}
+
+.signal-label {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.reason-item {
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.7;
+}
+
+.stat-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  width: 33.33%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #8a8f99;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ---- manage ---- */
+
+.list-title {
+  margin: 18px 14px 6px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.field-label {
+  font-size: 13px;
+  color: #8a8f99;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.field-input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 16px;
+}
+
+.field-input:disabled {
+  background: #f5f6fa;
+  color: #8a8f99;
+}
+
+.form-error {
+  color: #e54d42;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.form-actions {
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.item-card {
+  padding-bottom: 14px;
+}
+
+.item-name {
+  font-size: 15px;
+  font-weight: 600;
+  max-width: 65%;
+}
+
+.action-icons {
+  gap: 16px;
+}
+
+.link {
+  color: #1677ff;
+  font-size: 13px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.link-danger {
+  color: #e54d42;
+}
+
+.done-btn {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 24px 14px 0;
+  text-align: center;
+  padding: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body {
+    background: #0f1115;
+  }
+  #app {
+    background: #14161b;
+  }
+  .topbar {
+    background: #1b1e25;
+    border-bottom-color: #262a33;
+  }
+  body {
+    color: #e5e7eb;
+  }
+  .card {
+    background: #1b1e25;
+    box-shadow: none;
+  }
+  .field-input {
+    background: #14161b;
+    border-color: #2a2e38;
+    color: #e5e7eb;
+  }
+  .field-input:disabled {
+    background: #1b1e25;
+  }
+  .btn-plain {
+    background: #1b1e25;
+  }
+  .signal-tag.signal-watch {
+    background: #262a33;
+    color: #9aa1ab;
+  }
+  .signal-card.watch {
+    border-left-color: #4b5563;
+  }
+}

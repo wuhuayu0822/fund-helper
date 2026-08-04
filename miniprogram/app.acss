@@ -1,0 +1,49 @@
+page {
+  background: #f5f6fa;
+  font-family: -apple-system, "Helvetica Neue", sans-serif;
+  color: #1a1a1a;
+  box-sizing: border-box;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.muted {
+  color: #8a8f99;
+  font-size: 24rpx;
+}
+
+.up {
+  color: #e54d42;
+}
+
+.down {
+  color: #16a34a;
+}
+
+.btn-primary {
+  background: #1677ff;
+  color: #ffffff;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+}
+
+.btn-plain {
+  background: #ffffff;
+  color: #1677ff;
+  border: 1rpx solid #1677ff;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+}

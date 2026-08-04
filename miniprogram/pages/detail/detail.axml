@@ -1,0 +1,47 @@
+<view class="page">
+  <view a:if="{{loading}}" class="card muted center-text">数据加载中...</view>
+
+  <block a:if="{{!loading && loaded}}">
+    <view class="card head-card">
+      <view class="fund-name">{{fundName}}</view>
+      <view class="muted small">代码 {{fundCode}}</view>
+      <view class="row nav-row">
+        <view class="nav-value">{{estimateNav}}</view>
+        <view class="{{estimateChangePct >= 0 ? 'up' : 'down'}} nav-change">
+          {{estimateChangePct >= 0 ? '+' : ''}}{{estimateChangePct}}%
+        </view>
+      </view>
+      <view class="muted small">估值时间 {{estimateTime}}（昨日净值 {{lastNav}}，{{lastNavDate}}）</view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">近{{chartDays}}日净值走势</view>
+      <canvas id="chart" class="chart" width="690" height="340"></canvas>
+      <view class="row legend">
+        <view class="legend-item"><view class="dot dot-blue"></view>单位净值</view>
+        <view class="legend-item"><view class="dot dot-orange"></view>20日均线</view>
+      </view>
+    </view>
+
+    <view class="card signal-card signal-card-{{verdict}}">
+      <view class="signal-label">{{verdictLabel}}</view>
+      <view class="reason-item" a:for="{{reasons}}" a:key="*this">· {{item}}</view>
+    </view>
+
+    <view class="card">
+      <view class="section-title">技术指标</view>
+      <view class="stat-grid">
+        <view class="stat-item"><text class="stat-label">MA5</text><text class="stat-value">{{ma5}}</text></view>
+        <view class="stat-item"><text class="stat-label">MA20</text><text class="stat-value">{{ma20}}</text></view>
+        <view class="stat-item"><text class="stat-label">MA60</text><text class="stat-value">{{ma60}}</text></view>
+        <view class="stat-item"><text class="stat-label">RSI(14)</text><text class="stat-value">{{rsi}}</text></view>
+        <view class="stat-item"><text class="stat-label">乖离率(20)</text><text class="stat-value">{{bias20}}%</text></view>
+        <view class="stat-item"><text class="stat-label">区间分位</text><text class="stat-value">{{position}}%</text></view>
+      </view>
+    </view>
+
+    <view class="card disclaimer muted">{{disclaimer}}</view>
+  </block>
+
+  <view a:if="{{!loading && !loaded}}" class="card muted center-text">{{errorMsg}}</view>
+</view>

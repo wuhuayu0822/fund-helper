@@ -1,0 +1,8 @@
+{
+  "component2": true,
+  "plugins": {},
+  "es6": true,
+  "enableAppxNg": true,
+  "compileType": "miniprogram",
+  "name": "基金助手"
+}

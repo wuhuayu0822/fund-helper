@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>基金助手</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <button id="backBtn" class="topbar-back hidden" aria-label="返回">←</button>
+    <div id="pageTitle" class="topbar-title">基金助手</div>
+    <button id="refreshBtn" class="topbar-action hidden" aria-label="刷新">刷新</button>
+  </header>
+
+  <main id="view-overview" class="view">
+    <div class="card summary">
+      <div class="summary-title">持仓总资产（估）</div>
+      <div class="summary-value" id="totalMarketValue">¥0.00</div>
+      <div class="row summary-sub">
+        <div id="totalProfit">持仓盈亏 0.00 (0.00%)</div>
+        <div id="totalTodayChange">今日估算 0.00</div>
+      </div>
+    </div>
+
+    <div class="row list-header">
+      <span class="section-title">我的持仓</span>
+      <button class="btn-plain" id="manageBtn">管理持仓</button>
+    </div>
+
+    <div id="overview-list"></div>
+
+    <div class="card disclaimer muted" id="disclaimer1"></div>
+  </main>
+
+  <main id="view-detail" class="view hidden">
+    <div class="card head-card">
+      <div class="fund-name" id="d-fundName">--</div>
+      <div class="muted small" id="d-fundCode">代码 --</div>
+      <div class="row nav-row">
+        <div class="nav-value" id="d-estimateNav">--</div>
+        <div class="nav-change" id="d-estimateChangePct">--</div>
+      </div>
+      <div class="muted small" id="d-estimateTime">--</div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">近90日净值走势</div>
+      <canvas id="chart"></canvas>
+      <div class="row legend">
+        <div class="legend-item"><span class="dot dot-blue"></span>单位净值</div>
+        <div class="legend-item"><span class="dot dot-orange"></span>20日均线</div>
+      </div>
+    </div>
+
+    <div class="card signal-card" id="d-signalCard">
+      <div class="signal-label" id="d-verdictLabel">--</div>
+      <div id="d-reasons"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">技术指标</div>
+      <div class="stat-grid" id="d-stats"></div>
+    </div>
+
+    <div class="card disclaimer muted" id="disclaimer2"></div>
+  </main>
+
+  <main id="view-manage" class="view hidden">
+    <div class="card">
+      <div class="section-title" id="m-formTitle">添加持仓</div>
+
+      <div class="field">
+        <label class="field-label">基金代码</label>
+        <input class="field-input" id="m-code" inputmode="numeric" maxlength="6" placeholder="6位基金代码，如 000001" />
+      </div>
+      <div class="field">
+        <label class="field-label">持有份额</label>
+        <input class="field-input" id="m-shares" inputmode="decimal" placeholder="如 1000" />
+      </div>
+      <div class="field">
+        <label class="field-label">持仓成本净值</label>
+        <input class="field-input" id="m-cost" inputmode="decimal" placeholder="如 1.2000" />
+      </div>
+
+      <div class="form-error hidden" id="m-error"></div>
+
+      <div class="row form-actions">
+        <button class="btn-plain action-btn hidden" id="m-cancelBtn">取消</button>
+        <button class="btn-primary action-btn" id="m-submitBtn">查询并添加</button>
+      </div>
+    </div>
+
+    <div class="section-title list-title">已添加持仓</div>
+    <div id="manage-list"></div>
+
+    <button class="btn-plain done-btn" id="m-doneBtn">完成，返回首页</button>
+  </main>
+
+</div>
+
+<script src="js/storage.js"></script>
+<script src="js/fundApi.js"></script>
+<script src="js/indicators.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
