@@ -6,14 +6,14 @@
   var VERDICT_LABEL = { buy: '建议关注买入', sell: '建议关注卖出', watch: '观望' };
   var VERDICT_CHIP_LABEL = { buy: '建议关注买入', watch: '观望', sell: '建议关注卖出' };
 
-  var CHART_FETCH_DAYS = 320; // 覆盖"1年"周期展示 + 均线/MACD 计算所需的前置数据
-  // maPeriod：图表叠加均线的跨度，随显示周期一起变化，避免切换周期时均线看起来"没反应"
+  var CHART_FETCH_DAYS = 0; // 0 = 不截断，拉取该基金全部历史净值（接口本身不支持按天数查询，反正都是全量返回）
+  // maPeriod 与 points 严格相等：均线跨度 = 图表显示的交易日数，几日图就配几日均线
   var PERIODS = [
-    { key: '10d', label: '10日', points: 10, maPeriod: 5 },
-    { key: '30d', label: '30日', points: 30, maPeriod: 10 },
-    { key: '3m', label: '3月', points: 66, maPeriod: 20 },
-    { key: '6m', label: '6月', points: 132, maPeriod: 30 },
-    { key: '1y', label: '1年', points: 245, maPeriod: 60 },
+    { key: '10d', label: '10日', points: 10, maPeriod: 10 },
+    { key: '30d', label: '30日', points: 30, maPeriod: 30 },
+    { key: '3m', label: '3月', points: 66, maPeriod: 66 },
+    { key: '6m', label: '6月', points: 132, maPeriod: 132 },
+    { key: '1y', label: '1年', points: 245, maPeriod: 245 },
   ];
   var DEFAULT_PERIOD = '3m';
 
