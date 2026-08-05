@@ -107,7 +107,18 @@
     return maxDd * 100;
   }
 
-  var MAX_SCORE = 7; // RSI(±2) + 区间分位(±1) + 乖离率(±1) + 均线金叉死叉(±1) + MACD金叉死叉(±1) + 布林带触轨(±1)
+  // 年化波动率（百分比）：区间内日收益率标准差 × sqrt(245)，仅作风险参考，不参与打分
+  function computeAnnualizedVolatility(navList, windowLen) {
+    var vals = navList.slice(-(windowLen || 60));
+    if (vals.length < 2) return null;
+    var returns = [];
+    for (var i = 1; i < vals.length; i++) returns.push((vals[i] - vals[i - 1]) / vals[i - 1]);
+    var mean = returns.reduce(function (a, b) { return a + b; }, 0) / returns.length;
+    var variance = returns.reduce(function (a, b) { return a + Math.pow(b - mean, 2); }, 0) / returns.length;
+    return Math.sqrt(variance) * Math.sqrt(245) * 100;
+  }
+
+  var MAX_SCORE = 8; // RSI(±2) + 区间分位(±1) + 乖离率(±1) + 均线金叉死叉(±1) + 均线多空排列(±1) + MACD金叉死叉(±1) + 布林带触轨(±1)
 
   function generateSignal(history) {
     if (!history || history.length < 10) {
@@ -153,6 +164,7 @@
     var bollLower = boll.lower[boll.lower.length - 1];
 
     var maxDrawdown = computeMaxDrawdown(windowVals);
+    var annualVol = computeAnnualizedVolatility(navList, windowLen);
 
     var buyScore = 0;
     var sellScore = 0;
@@ -200,6 +212,19 @@
       }
     }
 
+    var maAlign = null;
+    if (ma5 !== null && ma20 !== null && ma60 !== null) {
+      if (ma5 > ma20 && ma20 > ma60) {
+        maAlign = 'bull';
+        buyScore += 1;
+        reasons.push('均线呈多头排列（MA5>MA20>MA60），中短期趋势一致向上');
+      } else if (ma5 < ma20 && ma20 < ma60) {
+        maAlign = 'bear';
+        sellScore += 1;
+        reasons.push('均线呈空头排列（MA5<MA20<MA60），中短期趋势一致向下');
+      }
+    }
+
     if (macd.dif.length >= 2 && macd.dea.length >= 2) {
       var prevDif = macd.dif[macd.dif.length - 2];
       var prevDea = macd.dea[macd.dea.length - 2];
@@ -227,10 +252,10 @@
     var score = buyScore - sellScore;
     var verdict = 'watch';
     var verdictLabel = '观望：维持现有节奏，等待更明确信号';
-    if (score >= 3) {
+    if (score >= 4) {
       verdict = 'buy';
       verdictLabel = '建议关注买入区间：可考虑逢低分批建仓';
-    } else if (score <= -3) {
+    } else if (score <= -4) {
       verdict = 'sell';
       verdictLabel = '建议关注卖出/止盈：短期涨幅或已透支，注意控制仓位';
     }
@@ -262,6 +287,8 @@
         bollUpper: bollUpper,
         bollLower: bollLower,
         maxDrawdown: maxDrawdown,
+        maAlign: maAlign,
+        annualVol: annualVol,
       },
     };
   }
@@ -273,6 +300,7 @@
     computeMACD: computeMACD,
     computeBollinger: computeBollinger,
     computeMaxDrawdown: computeMaxDrawdown,
+    computeAnnualizedVolatility: computeAnnualizedVolatility,
     generateSignal: generateSignal,
   };
 })(window);

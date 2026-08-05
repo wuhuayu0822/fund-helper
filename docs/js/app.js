@@ -4,6 +4,29 @@
   var DISCLAIMER =
     '本工具所有买卖建议均由历史净值技术指标自动计算生成，仅供参考，不构成投资建议，据此操作风险自负。';
   var VERDICT_LABEL = { buy: '建议关注买入', sell: '建议关注卖出', watch: '观望' };
+  var VERDICT_CHIP_LABEL = { buy: '建议关注买入', watch: '观望', sell: '建议关注卖出' };
+
+  var CHART_FETCH_DAYS = 320; // 覆盖"1年"周期展示 + 均线/MACD 计算所需的前置数据
+  var PERIODS = [
+    { key: '10d', label: '10日', points: 10 },
+    { key: '30d', label: '30日', points: 30 },
+    { key: '3m', label: '3月', points: 66 },
+    { key: '6m', label: '6月', points: 132 },
+    { key: '1y', label: '1年', points: 245 },
+  ];
+  var DEFAULT_PERIOD = '3m';
+
+  var INDICATOR_LEGEND = [
+    { name: 'MA5/MA20/MA60（均线）', range: '净值在均线上方偏强，下方偏弱', desc: '近5/20/60个交易日净值的平均线。短期均线上穿长期均线称"金叉"（转强信号），下穿称"死叉"（转弱信号）。' },
+    { name: '均线排列', range: '多头排列 / 空头排列', desc: 'MA5>MA20>MA60 为多头排列，说明中短期趋势一致向上；MA5<MA20<MA60 为空头排列，趋势一致向下；排列混乱说明趋势不明朗。' },
+    { name: 'RSI(14)', range: '0~100，<30超卖 / >70超买', desc: '相对强弱指标。数值越低说明近期跌得越急，可能出现反弹；数值越高说明近期涨得越急，注意回调风险；30~70为中性。' },
+    { name: '乖离率(20)', range: '|乖离率| > 5% 视为明显偏离', desc: '净值偏离20日均线的百分比。正值越大越可能短期涨幅透支，负值越大越可能短期超跌。' },
+    { name: '区间分位', range: '0%=近60日最低，100%=近60日最高', desc: '当前净值在近60个交易日最高最低区间中的相对位置，≤20%视为低位，≥80%视为高位。' },
+    { name: 'MACD柱', range: '转正/放大偏多，转负/缩小偏空', desc: 'DIF与DEA的差值×2，反映中期动能强弱。DIF上穿DEA为金叉，下穿为死叉。' },
+    { name: '布林带', range: '净值触及下轨/上轨为极端信号', desc: '20日均线±2倍标准差构成的区间，反映近期正常波动范围，触及边界视为短期超跌/超涨。' },
+    { name: '最大回撤', range: '数值越负，历史最坏情况越差', desc: '统计区间内从最高点到之后最低点的最大跌幅，反映持有期间可能经历的最差账面亏损。' },
+    { name: '年化波动率', range: '纯债<5%，偏股混合15~30%，主题基金更高', desc: '净值日收益率标准差年化后的结果，反映净值波动剧烈程度，仅作风险参考，不参与买卖打分。数值越高，潜在的涨跌弹性越大。' },
+  ];
 
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) {
@@ -61,7 +84,7 @@
   window.addEventListener('hashchange', render);
   window.addEventListener('resize', debounce(function () {
     if (parseHash().view === 'detail' && lastChartData) {
-      FundChart.drawNavChart($('chart'), lastChartData.navList, lastChartData.ma20Arr);
+      drawChartForPeriod(currentPeriod);
     }
   }, 200));
 
@@ -157,8 +180,29 @@
       if (parseHash().view !== 'overview') return; // 用户已切换到其他页面
       renderOverviewList(results);
       renderSummary(results);
+      renderVerdictSummary(results);
       $('lastUpdated').textContent = '更新于 ' + new Date().toLocaleTimeString('zh-CN', { hour12: false });
     });
+  }
+
+  function renderVerdictSummary(items) {
+    var el = $('verdictSummary');
+    var valid = items.filter(function (h) { return !h.error; });
+    if (valid.length === 0) {
+      el.classList.add('hidden');
+      return;
+    }
+    var counts = { buy: 0, watch: 0, sell: 0 };
+    valid.forEach(function (h) { counts[h.verdict] = (counts[h.verdict] || 0) + 1; });
+    el.classList.remove('hidden');
+    el.innerHTML = ['buy', 'watch', 'sell']
+      .map(function (v) {
+        return (
+          '<div class="verdict-chip ' + v + '">' + esc(VERDICT_CHIP_LABEL[v]) +
+          '<span class="verdict-count">' + counts[v] + '</span></div>'
+        );
+      })
+      .join('');
   }
 
   function renderOverviewList(items) {
@@ -213,6 +257,7 @@
   // ---------------- detail ----------------
 
   var lastChartData = null;
+  var currentPeriod = DEFAULT_PERIOD;
 
   function loadDetail(code) {
     $('disclaimer2').textContent = DISCLAIMER;
@@ -227,9 +272,11 @@
     $('d-reasons').innerHTML = '';
     $('d-stats').innerHTML = '';
     $('d-newsLinks').innerHTML = '';
+    $('d-periodTabs').innerHTML = '';
     lastChartData = null;
+    currentPeriod = DEFAULT_PERIOD;
 
-    FundApi.fetchHistory(code, 90)
+    FundApi.fetchHistory(code, CHART_FETCH_DAYS)
       .then(function (hist) {
         if (parseHash().code !== code) return; // 用户已切换到其他基金
         var history = hist.history;
@@ -254,16 +301,19 @@
           .map(function (r) { return '<div class="reason-item">· ' + esc(r) + '</div>'; })
           .join('');
 
+        var maAlignText = s.maAlign === 'bull' ? '多头排列' : s.maAlign === 'bear' ? '空头排列' : '不明朗';
         var stats = [
           ['MA5', s.ma5 ? fmt(s.ma5, 4) : '--'],
           ['MA20', s.ma20 ? fmt(s.ma20, 4) : '--'],
           ['MA60', s.ma60 ? fmt(s.ma60, 4) : '--'],
+          ['均线排列', maAlignText],
           ['RSI(14)', s.rsi !== null && s.rsi !== undefined ? fmt(s.rsi, 1) : '--'],
           ['乖离率(20)', s.bias20 !== null && s.bias20 !== undefined ? fmt(s.bias20, 1) + '%' : '--'],
           ['区间分位', s.position !== null && s.position !== undefined ? fmt(s.position * 100, 0) + '%' : '--'],
           ['MACD柱', s.macdHist !== null && s.macdHist !== undefined ? fmt(s.macdHist, 4) : '--'],
           ['布林带', s.bollLower !== null && s.bollUpper !== undefined ? fmt(s.bollLower, 3) + '~' + fmt(s.bollUpper, 3) : '--'],
           ['近' + s.windowLen + '日最大回撤', s.maxDrawdown !== null && s.maxDrawdown !== undefined ? fmt(s.maxDrawdown, 1) + '%' : '--'],
+          ['年化波动率', s.annualVol !== null && s.annualVol !== undefined ? fmt(s.annualVol, 1) + '%' : '--'],
         ];
         $('d-stats').innerHTML = stats
           .map(function (item) {
@@ -282,10 +332,11 @@
           })
           .join('');
 
-        var navList = history.map(function (h) { return h.nav; });
-        var ma20Arr = FundIndicators.computeMA(navList, Math.min(20, navList.length));
-        lastChartData = { navList: navList, ma20Arr: ma20Arr };
-        FundChart.drawNavChart($('chart'), navList, ma20Arr);
+        var fullNavList = history.map(function (h) { return h.nav; });
+        var fullMa20Arr = FundIndicators.computeMA(fullNavList, Math.min(20, fullNavList.length));
+        lastChartData = { navList: fullNavList, ma20Arr: fullMa20Arr };
+        renderPeriodTabs();
+        drawChartForPeriod(currentPeriod);
       })
       .catch(function (err) {
         if (parseHash().code !== code) return;
@@ -293,6 +344,48 @@
         $('d-estimateTime').textContent = (err && err.message) || '请检查基金代码或网络';
       });
   }
+
+  function renderPeriodTabs() {
+    var el = $('d-periodTabs');
+    el.innerHTML = PERIODS.map(function (p) {
+      return '<button class="period-tab' + (p.key === currentPeriod ? ' active' : '') + '" data-period="' + p.key + '">' + p.label + '</button>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.period-tab'), function (btn) {
+      btn.addEventListener('click', function () {
+        currentPeriod = btn.dataset.period;
+        Array.prototype.forEach.call(el.querySelectorAll('.period-tab'), function (b) {
+          b.classList.toggle('active', b === btn);
+        });
+        drawChartForPeriod(currentPeriod);
+      });
+    });
+  }
+
+  function drawChartForPeriod(periodKey) {
+    if (!lastChartData) return;
+    var period = PERIODS.filter(function (p) { return p.key === periodKey; })[0] || PERIODS[2];
+    var n = Math.min(period.points, lastChartData.navList.length);
+    var navSlice = lastChartData.navList.slice(-n);
+    var maSlice = lastChartData.ma20Arr.slice(-n);
+    $('d-chartTitle').textContent = '近' + period.label + '净值走势';
+    FundChart.drawNavChart($('chart'), navSlice, maSlice);
+  }
+
+  $('d-legendToggle').addEventListener('click', function () {
+    var el = $('d-indicatorLegend');
+    var hidden = el.classList.toggle('hidden');
+    $('d-legendToggle').textContent = '指标参考区间与含义说明 ' + (hidden ? '▾' : '▴');
+  });
+
+  $('d-indicatorLegend').innerHTML = INDICATOR_LEGEND.map(function (item) {
+    return (
+      '<div class="indicator-legend-item">' +
+      '<span class="indicator-legend-name">' + esc(item.name) + '</span>' +
+      '<span class="indicator-legend-range">' + esc(item.range) + '</span>' +
+      '<div class="indicator-legend-desc">' + esc(item.desc) + '</div>' +
+      '</div>'
+    );
+  }).join('');
 
   // ---------------- manage ----------------
 

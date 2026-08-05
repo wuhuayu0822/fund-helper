@@ -26,6 +26,8 @@
       <div class="summary-updated" id="lastUpdated"></div>
     </div>
 
+    <div class="row verdict-summary hidden" id="verdictSummary"></div>
+
     <div class="row list-header">
       <span class="section-title">我的持仓</span>
       <button class="btn-plain" id="manageBtn">管理持仓</button>
@@ -47,8 +49,20 @@
       <div class="muted small" id="d-estimateTime">--</div>
     </div>
 
+    <div class="card signal-card" id="d-signalCard">
+      <div class="row signal-head">
+        <div class="signal-label" id="d-verdictLabel">--</div>
+        <div class="score-badge" id="d-scoreBadge">--</div>
+      </div>
+      <div class="score-legend muted">评分范围 -8 ~ +8：越接近 +8 越偏向"建议买入"，越接近 -8 越偏向"建议卖出"，接近 0 为观望，≥+4 才会给出买入建议，≤-4 才会给出卖出建议。</div>
+      <div id="d-reasons"></div>
+    </div>
+
     <div class="card">
-      <div class="section-title">近90日净值走势</div>
+      <div class="row chart-header">
+        <span class="section-title" id="d-chartTitle">净值走势</span>
+      </div>
+      <div class="row period-tabs" id="d-periodTabs"></div>
       <canvas id="chart"></canvas>
       <div class="row legend">
         <div class="legend-item"><span class="dot dot-blue"></span>单位净值</div>
@@ -56,17 +70,14 @@
       </div>
     </div>
 
-    <div class="card signal-card" id="d-signalCard">
-      <div class="row signal-head">
-        <div class="signal-label" id="d-verdictLabel">--</div>
-        <div class="score-badge" id="d-scoreBadge">--</div>
-      </div>
-      <div id="d-reasons"></div>
-    </div>
-
     <div class="card">
       <div class="section-title">技术指标</div>
       <div class="stat-grid" id="d-stats"></div>
+    </div>
+
+    <div class="card">
+      <button class="legend-toggle" id="d-legendToggle">指标参考区间与含义说明 ▾</button>
+      <div id="d-indicatorLegend" class="indicator-legend hidden"></div>
     </div>
 
     <div class="card">
