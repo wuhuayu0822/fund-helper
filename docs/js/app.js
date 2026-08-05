@@ -7,12 +7,13 @@
   var VERDICT_CHIP_LABEL = { buy: '建议关注买入', watch: '观望', sell: '建议关注卖出' };
 
   var CHART_FETCH_DAYS = 320; // 覆盖"1年"周期展示 + 均线/MACD 计算所需的前置数据
+  // maPeriod：图表叠加均线的跨度，随显示周期一起变化，避免切换周期时均线看起来"没反应"
   var PERIODS = [
-    { key: '10d', label: '10日', points: 10 },
-    { key: '30d', label: '30日', points: 30 },
-    { key: '3m', label: '3月', points: 66 },
-    { key: '6m', label: '6月', points: 132 },
-    { key: '1y', label: '1年', points: 245 },
+    { key: '10d', label: '10日', points: 10, maPeriod: 5 },
+    { key: '30d', label: '30日', points: 30, maPeriod: 10 },
+    { key: '3m', label: '3月', points: 66, maPeriod: 20 },
+    { key: '6m', label: '6月', points: 132, maPeriod: 30 },
+    { key: '1y', label: '1年', points: 245, maPeriod: 60 },
   ];
   var DEFAULT_PERIOD = '3m';
 
@@ -332,9 +333,7 @@
           })
           .join('');
 
-        var fullNavList = history.map(function (h) { return h.nav; });
-        var fullMa20Arr = FundIndicators.computeMA(fullNavList, Math.min(20, fullNavList.length));
-        lastChartData = { navList: fullNavList, ma20Arr: fullMa20Arr };
+        lastChartData = { navList: history.map(function (h) { return h.nav; }) };
         renderPeriodTabs();
         drawChartForPeriod(currentPeriod);
       })
@@ -364,10 +363,14 @@
   function drawChartForPeriod(periodKey) {
     if (!lastChartData) return;
     var period = PERIODS.filter(function (p) { return p.key === periodKey; })[0] || PERIODS[2];
-    var n = Math.min(period.points, lastChartData.navList.length);
-    var navSlice = lastChartData.navList.slice(-n);
-    var maSlice = lastChartData.ma20Arr.slice(-n);
+    var fullNavList = lastChartData.navList;
+    // 均线在完整历史上计算，再截取显示窗口，保证窗口起始处也有正常的均线数值（不会因预热不足而缺失）
+    var fullMaArr = FundIndicators.computeMA(fullNavList, Math.min(period.maPeriod, fullNavList.length));
+    var n = Math.min(period.points, fullNavList.length);
+    var navSlice = fullNavList.slice(-n);
+    var maSlice = fullMaArr.slice(-n);
     $('d-chartTitle').textContent = '近' + period.label + '净值走势';
+    $('d-maLegend').textContent = period.maPeriod + '日均线';
     FundChart.drawNavChart($('chart'), navSlice, maSlice);
   }
 
