@@ -259,6 +259,7 @@
 
   var lastChartData = null;
   var currentPeriod = DEFAULT_PERIOD;
+  var currentAvailablePeriods = [];
 
   function loadDetail(code) {
     $('disclaimer2').textContent = DISCLAIMER;
@@ -274,8 +275,12 @@
     $('d-stats').innerHTML = '';
     $('d-newsLinks').innerHTML = '';
     $('d-periodTabs').innerHTML = '';
+    $('d-dailyTable').innerHTML = '';
+    $('d-periodNote').textContent = '';
+    $('d-sinceAdded').classList.add('hidden');
     lastChartData = null;
     currentPeriod = DEFAULT_PERIOD;
+    currentAvailablePeriods = [];
 
     FundApi.fetchHistory(code, CHART_FETCH_DAYS)
       .then(function (hist) {
@@ -294,6 +299,34 @@
         changeEl.className = 'nav-change ' + (latest.changePct >= 0 ? 'up' : 'down');
         $('d-estimateTime').textContent =
           '净值日期 ' + (latest.date || '--') + (latest.prevNav !== null ? '（较上一交易日净值 ' + fmt(latest.prevNav, 4) + '）' : '');
+
+        var holding = FundStorage.getHoldings().find(function (h) { return h.fundCode === code; });
+        if (holding && holding.shares > 0) {
+          var navAtAdd = holding.amount / holding.shares;
+          var sinceAddedPct = ((latest.nav - navAtAdd) / navAtAdd) * 100;
+          $('d-sinceAdded').classList.remove('hidden');
+          var sinceEl = $('d-sinceAddedValue');
+          sinceEl.textContent = signed(sinceAddedPct, 2) + '%（添加时净值约 ' + fmt(navAtAdd, 4) + '）';
+          sinceEl.className = sinceAddedPct >= 0 ? 'up' : 'down';
+        }
+
+        var dailyN = 10;
+        var dailyTail = history.slice(-(dailyN + 1));
+        var dailyRows = [];
+        for (var di = 1; di < dailyTail.length; di++) {
+          var dChg = ((dailyTail[di].nav - dailyTail[di - 1].nav) / dailyTail[di - 1].nav) * 100;
+          dailyRows.push({ date: dailyTail[di].date, nav: dailyTail[di].nav, chg: dChg });
+        }
+        dailyRows.reverse();
+        $('d-dailyTable').innerHTML = dailyRows
+          .map(function (r) {
+            return (
+              '<div class="daily-row"><span class="daily-date">' + esc(r.date) + '</span>' +
+              '<span class="daily-nav">' + fmt(r.nav, 4) + '</span>' +
+              '<span class="daily-change ' + (r.chg >= 0 ? 'up' : 'down') + '">' + signed(r.chg, 2) + '%</span></div>'
+            );
+          })
+          .join('') || '<div class="muted center-text">暂无数据</div>';
 
         $('d-signalCard').className = 'card signal-card ' + signal.verdict;
         $('d-verdictLabel').textContent = signal.verdictLabel;
@@ -333,7 +366,22 @@
           })
           .join('');
 
-        lastChartData = { navList: history.map(function (h) { return h.nav; }) };
+        var fullNavList = history.map(function (h) { return h.nav; });
+        lastChartData = { navList: fullNavList };
+
+        // 只保留"均线预热窗口+显示窗口"都能用真实历史数据完整覆盖的周期，数据不够就不提供该选项
+        currentAvailablePeriods = PERIODS.filter(function (p) { return fullNavList.length >= p.points + p.maPeriod; });
+        if (currentAvailablePeriods.length === 0) {
+          currentAvailablePeriods = [{ key: 'all', label: '近' + fullNavList.length + '日', points: fullNavList.length, maPeriod: 0 }];
+        }
+        if (!currentAvailablePeriods.some(function (p) { return p.key === currentPeriod; })) {
+          currentPeriod = currentAvailablePeriods[currentAvailablePeriods.length - 1].key;
+        }
+        var hiddenCount = PERIODS.length - currentAvailablePeriods.filter(function (p) { return p.key !== 'all'; }).length;
+        $('d-periodNote').textContent = hiddenCount > 0
+          ? '该基金历史净值不足，已隐藏 ' + hiddenCount + ' 个数据不够真实完整的周期选项'
+          : '';
+
         renderPeriodTabs();
         drawChartForPeriod(currentPeriod);
       })
@@ -346,7 +394,7 @@
 
   function renderPeriodTabs() {
     var el = $('d-periodTabs');
-    el.innerHTML = PERIODS.map(function (p) {
+    el.innerHTML = currentAvailablePeriods.map(function (p) {
       return '<button class="period-tab' + (p.key === currentPeriod ? ' active' : '') + '" data-period="' + p.key + '">' + p.label + '</button>';
     }).join('');
     Array.prototype.forEach.call(el.querySelectorAll('.period-tab'), function (btn) {
@@ -362,15 +410,22 @@
 
   function drawChartForPeriod(periodKey) {
     if (!lastChartData) return;
-    var period = PERIODS.filter(function (p) { return p.key === periodKey; })[0] || PERIODS[2];
+    var period = currentAvailablePeriods.filter(function (p) { return p.key === periodKey; })[0] || currentAvailablePeriods[0];
     var fullNavList = lastChartData.navList;
-    // 均线在完整历史上计算，再截取显示窗口，保证窗口起始处也有正常的均线数值（不会因预热不足而缺失）
-    var fullMaArr = FundIndicators.computeMA(fullNavList, Math.min(period.maPeriod, fullNavList.length));
     var n = Math.min(period.points, fullNavList.length);
     var navSlice = fullNavList.slice(-n);
-    var maSlice = fullMaArr.slice(-n);
+    var maSlice;
+    if (period.maPeriod > 0) {
+      // 均线在完整历史上计算，再截取显示窗口，保证窗口起始处也有正常的均线数值（不会因预热不足而缺失）
+      var fullMaArr = FundIndicators.computeMA(fullNavList, period.maPeriod);
+      maSlice = fullMaArr.slice(-n);
+      $('d-maLegend').textContent = period.maPeriod + '日均线';
+      $('d-maLegendItem').classList.remove('hidden');
+    } else {
+      maSlice = new Array(n).fill(null);
+      $('d-maLegendItem').classList.add('hidden');
+    }
     $('d-chartTitle').textContent = '近' + period.label + '净值走势';
-    $('d-maLegend').textContent = period.maPeriod + '日均线';
     FundChart.drawNavChart($('chart'), navSlice, maSlice);
   }
 

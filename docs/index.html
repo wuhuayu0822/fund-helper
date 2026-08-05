@@ -47,6 +47,10 @@
         <div class="nav-change" id="d-estimateChangePct">--</div>
       </div>
       <div class="muted small" id="d-estimateTime">--</div>
+      <div class="row since-added hidden" id="d-sinceAdded">
+        <span class="muted">自添加以来</span>
+        <span id="d-sinceAddedValue">--</span>
+      </div>
     </div>
 
     <div class="card signal-card" id="d-signalCard">
@@ -66,8 +70,14 @@
       <canvas id="chart"></canvas>
       <div class="row legend">
         <div class="legend-item"><span class="dot dot-blue"></span>单位净值</div>
-        <div class="legend-item"><span class="dot dot-orange"></span><span id="d-maLegend">20日均线</span></div>
+        <div class="legend-item hidden" id="d-maLegendItem"><span class="dot dot-orange"></span><span id="d-maLegend">20日均线</span></div>
       </div>
+      <div class="muted period-note" id="d-periodNote"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">近期净值明细</div>
+      <div class="daily-table" id="d-dailyTable"></div>
     </div>
 
     <div class="card">

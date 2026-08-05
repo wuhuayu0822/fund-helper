@@ -268,6 +268,17 @@ button {
   font-weight: 600;
 }
 
+.since-added {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f0f2f5;
+  font-size: 13px;
+}
+
+.since-added #d-sinceAddedValue {
+  font-weight: 700;
+}
+
 canvas#chart {
   width: 100%;
   height: 220px;
@@ -387,6 +398,45 @@ canvas#chart {
   background: #1677ff;
   color: #ffffff;
   font-weight: 600;
+}
+
+.period-note {
+  font-size: 11px;
+  margin-top: 8px;
+}
+
+.daily-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.daily-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f2f5;
+  font-size: 13px;
+}
+
+.daily-row:last-child {
+  border-bottom: none;
+}
+
+.daily-date {
+  color: #8a8f99;
+  flex: 1;
+}
+
+.daily-nav {
+  flex: 1;
+  text-align: right;
+  font-weight: 600;
+}
+
+.daily-change {
+  flex: 1;
+  text-align: right;
 }
 
 .legend-toggle {
@@ -593,5 +643,10 @@ canvas#chart {
   }
   .legend-toggle {
     color: #e5e7eb;
+  }
+  .since-added,
+  .daily-row {
+    border-bottom-color: #262a33;
+    border-top-color: #262a33;
   }
 }
